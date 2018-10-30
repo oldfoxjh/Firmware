@@ -9,5 +9,7 @@
 
 sh /etc/init.d/rc.mc_defaults
 
+param set MPC_OBS_AVOID 1
+
 set MIXER quad_w
 
