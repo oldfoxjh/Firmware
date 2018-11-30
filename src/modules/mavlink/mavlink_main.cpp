@@ -1999,6 +1999,7 @@ Mavlink::task_main(int argc, char *argv[])
 		/* COMMAND_LONG stream: use unlimited rate to send all commands */
 		configure_stream("COMMAND_LONG");
 
+        configure_stream("ENORD_COMMAND_LONG");
 	}
 
 	switch (_mode) {

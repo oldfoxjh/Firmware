@@ -260,7 +260,21 @@ Mission::on_active()
 	    && (_navigator->abort_landing())) {
 
 		do_abort_landing();
-	}
+    }
+    else if(_mission_item.nav_cmd == NAV_CMD_DELAY)
+    //else if(_mission_item.nav_cmd == NAV_CMD_SPRAYING_CONTROL)
+    {
+        // To Do Enord Message
+        enord_command_s _enord_command;
+
+        _enord_command.pump_on_off = _mission_item.params[0];
+        _enord_command.direction = _mission_item.params[1];
+
+        mavlink_log_info(_navigator->get_mavlink_log_pub(), "NAV_CMD_DELAY param1 : %.4f", (double)_mission_item.params[0]);
+        mavlink_log_info(_navigator->get_mavlink_log_pub(), "NAV_CMD_DELAY param2 : %.4f", (double)_mission_item.params[1]);
+
+        _navigator->publish_enord_cmd(&_enord_command);
+    }
 
 	if (_work_item_type == WORK_ITEM_TYPE_PRECISION_LAND) {
 		// switch out of precision land once landed

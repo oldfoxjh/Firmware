@@ -63,6 +63,7 @@
 #include <uORB/topics/actuator_direct.h>
 #include <uORB/topics/rc_channels.h>
 #include <uORB/topics/vehicle_local_position.h>
+#include <uORB/topics/enord_command.h>
 
 #include "actuators/esc.hpp"
 #include "actuators/enord_esc.hpp"
@@ -196,10 +197,9 @@ private:
 
 	List<IUavcanSensorBridge *>	_sensor_bridges;		///< List of active sensor bridges
 	///< ENORD ESC
-    int                             _rc_channels_sub;               /**< rc channels data subscription */
-    int                             _channel_value;                 /**< channel select value **/
-    int                             _vehicle_local_position_sub;       /**< gps control subscription handle */
-    int                             _vehicle_attitude_sub;
+        int                             _rc_channels_sub;               /**< rc channels data subscription */
+        int                             _vehicle_local_position_sub;   /**< gps control subscription handle */
+        int                             _enord_command_sub;
 
 	MixerGroup			*_mixers = nullptr;
 	ITxQueueInjector		*_tx_injector;

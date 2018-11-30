@@ -101,6 +101,7 @@
 #include <uORB/topics/sensor_gyro.h>
 #include <uORB/topics/vehicle_air_data.h>
 #include <uORB/topics/vehicle_magnetometer.h>
+#include <uORB/topics/enord_report.h>
 #include <uORB/uORB.h>
 
 using matrix::wrap_2pi;
@@ -4131,6 +4132,81 @@ protected:
 	}
 };
 
+class MavlinkStreamENORDCommandLong : public MavlinkStream
+{
+public:
+    const char *get_name() const
+    {
+        return MavlinkStreamENORDCommandLong::get_name_static();
+    }
+
+    static const char *get_name_static()
+    {
+        return "ENORD_COMMAND_LONG";
+    }
+
+    static uint16_t get_id_static()
+    {
+        return 0;
+    }
+
+    uint16_t get_id()
+    {
+        return get_id_static();
+    }
+
+    static MavlinkStream *new_instance(Mavlink *mavlink)
+    {
+        return new MavlinkStreamENORDCommandLong(mavlink);
+    }
+
+    unsigned get_size()
+    {
+        return MAVLINK_MSG_ID_COMMAND_LONG_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+    }
+
+    orb_advert_t	_mavlink_log_pub;
+
+private:
+    MavlinkOrbSubscription *_cmd_sub;
+
+    /* do not allow top copying this class */
+    MavlinkStreamENORDCommandLong(MavlinkStreamENORDCommandLong &) = delete;
+    MavlinkStreamENORDCommandLong &operator = (const MavlinkStreamENORDCommandLong &) = delete;
+
+protected:
+    explicit MavlinkStreamENORDCommandLong(Mavlink *mavlink) : MavlinkStream(mavlink),
+        _cmd_sub(_mavlink->add_orb_subscription(ORB_ID(enord_report)))
+    {}
+
+    bool send(const hrt_abstime t)
+    {
+        enord_report_s report;
+
+        if (_cmd_sub->update_if_changed(&report))
+        {
+
+            mavlink_command_long_t msg = {};
+
+            msg.target_system = 0;
+            msg.target_component = MAV_COMP_ID_ALL;
+            msg.command = MAV_CMD_SPRAYING_REPORT;
+            msg.confirmation = 0;
+            msg.param1 = report.pump;
+            msg.param2 = report.balance;
+            msg.param3 = 0;
+            msg.param4 = 0;
+            msg.param5 = 0;
+            msg.param6 = 0;
+            msg.param7 = 0;
+
+            mavlink_msg_command_long_send_struct(_mavlink->get_channel(), &msg);
+        }
+
+        return true;
+    }
+};
+
 static const StreamListItem streams_list[] = {
 	StreamListItem(&MavlinkStreamHeartbeat::new_instance, &MavlinkStreamHeartbeat::get_name_static, &MavlinkStreamHeartbeat::get_id_static),
 	StreamListItem(&MavlinkStreamStatustext::new_instance, &MavlinkStreamStatustext::get_name_static, &MavlinkStreamStatustext::get_id_static),
@@ -4182,7 +4258,8 @@ static const StreamListItem streams_list[] = {
 	StreamListItem(&MavlinkStreamMountOrientation::new_instance, &MavlinkStreamMountOrientation::get_name_static, &MavlinkStreamMountOrientation::get_id_static),
 	StreamListItem(&MavlinkStreamHighLatency2::new_instance, &MavlinkStreamHighLatency2::get_name_static, &MavlinkStreamHighLatency2::get_id_static),
 	StreamListItem(&MavlinkStreamGroundTruth::new_instance, &MavlinkStreamGroundTruth::get_name_static, &MavlinkStreamGroundTruth::get_id_static),
-	StreamListItem(&MavlinkStreamPing::new_instance, &MavlinkStreamPing::get_name_static, &MavlinkStreamPing::get_id_static)
+    StreamListItem(&MavlinkStreamPing::new_instance, &MavlinkStreamPing::get_name_static, &MavlinkStreamPing::get_id_static),    
+    StreamListItem(&MavlinkStreamENORDCommandLong::new_instance, &MavlinkStreamENORDCommandLong::get_name_static, &MavlinkStreamENORDCommandLong::get_id_static)
 };
 
 const char *get_stream_name(const uint16_t msg_id)

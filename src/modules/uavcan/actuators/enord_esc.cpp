@@ -53,6 +53,7 @@ EnordEscController::EnordEscController(uavcan::INode &node) :
         _enord_esc_sub_echo(node),
         _orb_timer(node)
 {
+    _mavlink_log_pub = nullptr;
     _enord_pub_rpm_cmd.setPriority(UAVCAN_COMMAND_TRANSFER_PRIORITY);
 }
 
@@ -115,7 +116,7 @@ EnordEscController::GetOperationRawCommand(float ground_speed, float altitude)
     int32_t operation_max = 0;
 
     enord::esc::RawCommand msg;
-    msg.command = 0x01;
+    msg.command = 0x00;
 
     msg.start_duty1 = 0;
     msg.start_duty2 = 0;
@@ -135,16 +136,31 @@ EnordEscController::GetOperationRawCommand(float ground_speed, float altitude)
         msg.operating_duty1 = 0;
         break;
     case ENORD_ESC_OPERATION_OPERATION:
-        if(_roll_value > 0.0f || _roll_value < 0.0f)
+        if(_roll_value > 0.2f || _roll_value < -0.2f)
         {
             msg.operating_duty1 = 0;
         }else{
+            if(_pitch_value > 0.0f)         // go forward
+            {
+                msg.command = 0x00;
+            }else if(_pitch_value < 0.0f)   // go backword
+            {
+                msg.command = 0x01;
+            }
+
             msg.operating_duty1 = calculate_operation_duty(ground_speed, altitude, operation_min, operation_max);
+            // enord device status report data
+            if(msg.operating_duty1 > 0) _enord_report.pump = 1;
+            else _enord_report.pump = 0;
+            _enord_report.ground_speed = ground_speed;
         }
         break;
     }
 
     msg.operating_duty1 = (msg.operating_duty1 > 250) ? 250 : msg.operating_duty1;
+    PX4_INFO("operating_duty :\t%d!\n", msg.operating_duty1);
+    PX4_INFO("roll value:\t%.4f!\n", (double)_roll_value);
+    PX4_INFO("pitch value:\t%.4f!\n", (double)_pitch_value);
 
     return msg;
 }
@@ -186,9 +202,8 @@ void EnordEscController::esc_status_sub_cb(const uavcan::ReceivedDataStructure<e
 
 void EnordEscController::orb_pub_timer_cb(const uavcan::TimerEvent &)
 {
-    // echo check value publish
+    _enord_report.timestamp = hrt_absolute_time();
     _enord_report.balance += 1;
-    _enord_report.ground_speed += 0.01f;
     _enord_report.pump += 1;
     orb_publish(ORB_ID(enord_report), _pub_enord_report, &_enord_report);
 }

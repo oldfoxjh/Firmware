@@ -1259,6 +1259,17 @@ Navigator::publish_vehicle_cmd(vehicle_command_s *vcmd)
 }
 
 void
+Navigator::publish_enord_cmd(enord_command_s *ecmd)
+{
+    if (_enord_cmd_pub != nullptr) {
+        orb_publish(ORB_ID(enord_command), _enord_cmd_pub, ecmd);
+
+    } else {
+        _enord_cmd_pub = orb_advertise(ORB_ID(enord_command), ecmd);
+    }
+}
+
+void
 Navigator::publish_vehicle_command_ack(const vehicle_command_s &cmd, uint8_t result)
 {
 	vehicle_command_ack_s command_ack = {};

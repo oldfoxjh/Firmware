@@ -55,20 +55,26 @@
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/enord_report.h>
-
+#include <systemlib/mavlink_log.h>
 
 class EnordEscController
 {
 public:
-        EnordEscController(uavcan::INode &node);
-        ~EnordEscController();
 
-	int init();
+    static constexpr unsigned ENORD_ESC_OPERATION_MAX = -1;
+    static constexpr unsigned ENORD_ESC_OPERATION_IDLE = 0;
+    static constexpr unsigned ENORD_ESC_OPERATION_OPERATION = 1;
 
-        void update_outputs(float ground_speed, float altitude);
+    EnordEscController(uavcan::INode &node);
+    ~EnordEscController();
 
-        int32_t _switch_value = 0;
-        float _roll_value = 0.0f;
+    int init();
+
+    void update_outputs(float ground_speed, float altitude);
+
+    int32_t _switch_value = 0;
+    float _roll_value = 0.0f;
+    float _pitch_value = 0.0f;
 private:
 	/**
 	 * ESC status message reception will be reported via this callback.
@@ -87,12 +93,8 @@ private:
         enord::esc::RawCommand GetOperationRawCommand(float ground_speed, float altitude);
 
         static constexpr unsigned MAX_RATE_HZ = 5;			///< XXX make this configurable
-        static constexpr unsigned ESC_STATUS_UPDATE_RATE_HZ = 5;
+        static constexpr unsigned ESC_STATUS_UPDATE_RATE_HZ = 2;
 	static constexpr unsigned UAVCAN_COMMAND_TRANSFER_PRIORITY = 5;	///< 0..31, inclusive, 0 - highest, 31 - lowest
-
-        static constexpr unsigned ENORD_ESC_OPERATION_MAX = -1;
-        static constexpr unsigned ENORD_ESC_OPERATION_IDLE = 0;
-        static constexpr unsigned ENORD_ESC_OPERATION_OPERATION = 1;
 
         typedef uavcan::MethodBinder<EnordEscController *,
                 void (EnordEscController::*)(const uavcan::ReceivedDataStructure<enord::esc::RawCommand>&)>
@@ -117,6 +119,7 @@ private:
 	uavcan::TimerEventForwarder<TimerCbBinder>				_orb_timer;
         orb_advert_t                                                            _pub_enord_report;
         enord_report_s                                                          _enord_report;
+        orb_advert_t	_mavlink_log_pub;
 
         int calculate_operation_duty(float ground_speed, float altitude, int32_t operation_min, int32_t operation_max);
 };

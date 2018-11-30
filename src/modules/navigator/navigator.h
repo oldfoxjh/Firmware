@@ -71,6 +71,7 @@
 #include <uORB/topics/vehicle_gps_position.h>
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_local_position.h>
+#include <uORB/topics/enord_command.h>
 #include <uORB/uORB.h>
 
 /**
@@ -116,6 +117,8 @@ public:
 	void		publish_geofence_result();
 
 	void		publish_vehicle_cmd(vehicle_command_s *vcmd);
+
+    void        publish_enord_cmd(enord_command_s *ecmd);
 
 	/**
 	 * Generate an artificial traffic indication
@@ -290,6 +293,7 @@ private:
 	orb_advert_t	_vehicle_cmd_ack_pub{nullptr};
 	orb_advert_t	_vehicle_cmd_pub{nullptr};
 	orb_advert_t	_vehicle_roi_pub{nullptr};
+    orb_advert_t	_enord_cmd_pub{nullptr};
 
 	// Subscriptions
 	fw_pos_ctrl_status_s				_fw_pos_ctrl_status{};	/**< fixed wing navigation capabilities */

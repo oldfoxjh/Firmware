@@ -101,10 +101,9 @@ UavcanNode::UavcanNode(uavcan::ICanDriver &can_driver, uavcan::ISystemClock &sys
 	_control_topics[3] = ORB_ID(actuator_controls_3);
 
         ///> ENORD ESC
-        _channel_value = -99;
         _rc_channels_sub = -1;
-        _vehicle_attitude_sub = -1;
         _vehicle_local_position_sub = -1;
+        _enord_command_sub = -1;
         ///< ENORD ESC
 
 	int res = pthread_mutex_init(&_node_mutex, nullptr);
@@ -154,8 +153,8 @@ UavcanNode::~UavcanNode()
 	
      ///> ENORD ESC
     (void)orb_unsubscribe(_rc_channels_sub);
-    (void)orb_unsubscribe(_vehicle_local_position_sub);
-    (void)orb_unsubscribe(_vehicle_attitude_sub);
+    (void)orb_unsubscribe(_vehicle_local_position_sub);    
+    (void)orb_unsubscribe(_enord_command_sub);
 
 	// Removing the sensor bridges
 	auto br = _sensor_bridges.getHead();
@@ -796,7 +795,7 @@ int UavcanNode::run()
 	
     _rc_channels_sub = orb_subscribe(ORB_ID(rc_channels));
     _vehicle_local_position_sub = orb_subscribe(ORB_ID(vehicle_local_position));
-    _vehicle_attitude_sub = orb_subscribe(ORB_ID(vehicle_attitude));
+    _enord_command_sub = orb_subscribe(ORB_ID(enord_command));
 
 	memset(&_outputs, 0, sizeof(_outputs));
 
@@ -1006,15 +1005,39 @@ int UavcanNode::run()
 		
 		///> ENORD ESC
                 struct  rc_channels_s                 _rc_channels;
-                struct  vehicle_local_position_s       pos;
-//              struct  vehicle_attitude_s             att;
+                struct  vehicle_local_position_s      pos;
+                struct  enord_command_s               cmds;
 
                 orb_copy(ORB_ID(rc_channels), _rc_channels_sub, &_rc_channels);
                 orb_copy(ORB_ID(vehicle_local_position), _vehicle_local_position_sub, &pos);
-//              orb_copy(ORB_ID(vehicle_attitude), _vehicle_attitude_sub, &att);
+                orb_copy(ORB_ID(enord_command), _enord_command_sub, &cmds);
 
-                _enord_esc_controller._switch_value = (int)_rc_channels.channels[6];
-                _enord_esc_controller._roll_value = _rc_channels.channels[1];
+                _enord_esc_controller._switch_value = EnordEscController::ENORD_ESC_OPERATION_IDLE;
+                _enord_esc_controller._roll_value = 0;
+                _enord_esc_controller._pitch_value = 0;
+
+                int pitch_channel = 0;
+                int roll_channel = 0;
+                int spray_channel = 0;
+
+                (void)param_get(param_find("ENORD_PITCH"), &pitch_channel);
+                (void)param_get(param_find("ENORD_ROLL"), &roll_channel);
+                (void)param_get(param_find("ENORD_SWITCH"), &spray_channel);
+
+                if(cmds.pump_on_off > 0)
+                {
+                    _enord_esc_controller._switch_value =  EnordEscController::ENORD_ESC_OPERATION_OPERATION;
+                    if(cmds.direction > 0)
+                    {
+                        _enord_esc_controller._pitch_value = -1;
+                    }else{
+                        _enord_esc_controller._pitch_value = 1;
+                    }
+                }else{
+                    _enord_esc_controller._switch_value = (int)_rc_channels.channels[6];
+                    _enord_esc_controller._roll_value = _rc_channels.channels[0];
+                    _enord_esc_controller._pitch_value = _rc_channels.channels[1];
+                }
 
                 // later gps info test need...
                 double ground_speed = sqrtf(pos.vx * pos.vx + pos.vy * pos.vy);
